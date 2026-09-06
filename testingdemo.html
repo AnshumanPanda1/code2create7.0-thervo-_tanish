@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THERVO — AI Infrastructure Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── RESET & VARS ─── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-dark: #050912;
+      --bg-surface: #07111c;
+      --bg-panel: #0a1420;
+      --bg-panel-hover: #101c2e;
+      --bg-card: #0d1829;
+
+      --border-color: #1a2b47;
+      --border-bright: #274068;
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --brand-primary: #00f0ff;
+      --brand-blue: #3b82f6;
+      --brand-accent: #60a5fa;
+
+      --status-low: #10b981;
+      --status-med: #f59e0b;
+      --status-high: #f97316;
+      --status-crit: #ef4444;
+      --cooling-active: #00f0ff;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+      --topbar-height: 52px;
+      --bottombar-height: 38px;
+      --nav-width: 60px;
+      --inspector-width: 380px;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .mono { font-family: var(--font-mono); }
+
+    /* ─── MAIN APP SHELL ─── */
+    .app-shell {
+      display: grid;
+      grid-template-rows: var(--topbar-height) 1fr var(--bottombar-height);
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* ─── TOP BAR ─── */
+    .top-bar {
+      background: rgba(7, 17, 28, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 26px;
+      height: 26px;
+      background: radial-gradient(circle, var(--brand-primary) 0%, var(--brand-blue) 100%);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: var(--text-primary);
+    }
+
+    .status-badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--status-low);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .pulse-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--status-low);
+      box-shadow: 0 0 6px var(--status-low);
+    }
+
+    .top-stats-group {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .top-stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .top-stat-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .top-stat-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* ─── MAIN CONTENT LAYOUT ─── */
+    .main-body {
+      display: grid;
+      grid-template-columns: var(--nav-width) 1fr var(--inspector-width);
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ─── LEFT NAV RAIL ─── */
+    .nav-rail {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      gap: 20px;
+      z-index: 50;
+    }
+
+    .nav-icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .nav-icon-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-panel);
+    }
+
+    .nav-icon-btn.active {
+      color: var(--brand-primary);
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+
+    .nav-icon-btn::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 48px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      color: var(--text-primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 100;
+    }
+
+    .nav-icon-btn:hover::after {
+      opacity: 1;
+    }
+
+    /* ─── CENTER 3D VIEWPORT ─── */
+    .viewport-3d {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 40%, #0a1628 0%, #050912 100%);
+      overflow: hidden;
+    }
+
+    #viewportCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* HUD OVERLAYS ON VIEWPORT */
+    .hud-overlay {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hud-badge {
+      background: rgba(7, 17, 28, 0.75);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── RIGHT INSPECTOR PANEL ─── */
+    .inspector-panel {
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px;
+      gap: 16px;
+      z-index: 50;
+    }
+
+    .panel-section-title {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--brand-accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .inspector-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .stat-row:last-child { margin-bottom: 0; }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .stat-val {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .progress-bar-bg {
+      height: 4px;
+      background: var(--bg-panel);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      transition: width 0.3s;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .ctrl-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .ctrl-btn:hover {
+      background: var(--bg-panel-hover);
+      border-color: var(--brand-primary);
+    }
+
+    .ctrl-btn-primary {
+      background: var(--brand-blue);
+      border-color: var(--brand-primary);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .ctrl-btn-primary:hover { background: #2563eb; }
+
+    /* ─── BOTTOM STATUS BAR ─── */
+    .bottom-bar {
+      background: rgba(7, 17, 28, 0.95);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .bottom-status-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* ─── CRITICAL ALERT BANNER ─── */
+    .alert-top-banner {
+      position: absolute;
+      top: var(--topbar-height);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(239, 68, 68, 0.95);
+      color: #ffffff;
+      border: 1px solid #fca5a5;
+      padding: 8px 20px;
+      border-radius: 0 0 8px 8px;
+      font-weight: 700;
+      font-size: 11px;
+      z-index: 200;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+    }
+
+    .alert-top-banner.show { display: flex; }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-icon"></div>
+      <span class="brand-title">THERVO</span>
+      <div class="status-badge-live">
+        <span class="pulse-dot"></span>
+        LIVE
+      </div>
+      <span style="color:var(--border-bright);">|</span>
+      <span class="mono" style="color:var(--text-secondary); font-size:11px;" id="topSimTime">SIM TIME: 00:00:00</span>
+      <span class="mono" style="color:var(--text-muted); font-size:11px;">TICK: <strong id="topTick" style="color:var(--text-primary);">102</strong></span>
+    </div>
+
+    <div class="top-stats-group">
+      <div class="top-stat-item">
+        <span class="top-stat-label">SYSTEM RISK</span>
+        <span class="top-stat-val mono" id="topRiskVal" style="color:var(--status-low);">21.4%</span>
+      </div>
+      <div class="top-stat-item">
+        <span class="top-stat-label">ACTIVE COOLING</span>
+        <span class="top-stat-val mono" id="topCoolingVal" style="color:var(--brand-primary);">3 / 12</span>
+      </div>
+      <div class="top-stat-item">
+        <span class="top-stat-label">ENERGY SAVED</span>
+        <span class="top-stat-val mono" id="topEnergyVal" style="color:var(--status-low);">35.0%</span>
+      </div>
+      <div class="top-stat-item">
+        <span class="top-stat-label">HOT ZONES</span>
+        <span class="top-stat-val mono" id="topHotZonesVal">1</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CRITICAL ALERT BANNER -->
+  <div class="alert-top-banner" id="topAlertBanner">
+    <span>⚠ CRITICAL THERMAL RISK DETECTED — AUTOMATED INTERVENTIONS ACTIVE IN HIGHLIGHTED ZONES</span>
+  </div>
+
+  <!-- MAIN BODY GRID -->
+  <div class="main-body">
+
+    <!-- LEFT NAV RAIL -->
+    <nav class="nav-rail">
+      <button class="nav-icon-btn active" data-tooltip="Overview (Spatial 3D)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      </button>
+      <button class="nav-icon-btn" data-tooltip="Thermal Heatmap" onclick="alert('Thermal Heatmap Tab')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+      </button>
+      <button class="nav-icon-btn" data-tooltip="Topology (18 Edges)" onclick="alert('GNN Topology View')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+      </button>
+      <button class="nav-icon-btn" data-tooltip="Software Telemetry" onclick="alert('Telemetry Stream View')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      </button>
+      <button class="nav-icon-btn" data-tooltip="AI Model (XGB + GNN)" onclick="alert('Model Architecture View')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+      </button>
+      <button class="nav-icon-btn" data-tooltip="Event Audit Stream" onclick="alert('Audit Events Stream')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </button>
+    </nav>
+
+    <!-- CENTER 3D VIEWPORT -->
+    <div class="viewport-3d">
+      <canvas id="viewportCanvas"></canvas>
+
+      <div class="hud-overlay">
+        <div class="hud-badge">
+          <span style="font-weight:700; color:var(--brand-primary);">DATA CENTER 3D VIEWPORT</span>
+          <span>12 RACKS · 3 ZONES · 18 EDGES</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT INSPECTOR PANEL -->
+    <aside class="inspector-panel" id="inspectorPanel">
+      <!-- Dynamic Content rendered via JS -->
+    </aside>
+
+  </div>
+
+  <!-- BOTTOM STATUS BAR -->
+  <footer class="bottom-bar">
+    <div class="bottom-status-group">
+      <span>12 RACKS</span>
+      <span>·</span>
+      <span>3 ZONES</span>
+      <span>·</span>
+      <span style="color:var(--brand-primary);">● PREDICTIVE COOLING ACTIVE</span>
+      <span>·</span>
+      <span style="color:var(--status-low);">● ALL SYSTEMS NOMINAL</span>
+    </div>
+
+    <div class="bottom-status-group">
+      <span>SIM SPEED:</span>
+      <button class="btn-secondary" style="padding:2px 6px; font-size:10px;" onclick="setSpeed(1)">1x</button>
+      <button class="btn-secondary" style="padding:2px 6px; font-size:10px;" onclick="setSpeed(2)">2x</button>
+      <button class="btn-secondary" style="padding:2px 6px; font-size:10px;" onclick="setSpeed(5)">5x</button>
+      <span>·</span>
+      <span>EVENTS: <strong id="bottomEventCount" style="color:var(--text-primary);">24</strong></span>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ─── JAVASCRIPT ENGINE & RACK MODEL ─── -->
+<script>
+  // ─── CONSTANTS & SETUP ───
+  const NUM_RACKS = 12;
+  const ZONES = ['A','A','A','A', 'B','B','B','B', 'C','C','C','C'];
+  const GNN_EDGES = [
+    [0,1], [1,2], [2,3],
+    [4,5], [5,6], [6,7],
+    [8,9], [9,10], [10,11],
+    [0,4], [4,8], [1,5], [5,9], [2,6], [6,10], [3,7], [7,11],
+    [0,5]
+  ];
+
+  let epoch = 102;
+  let simTime = 105;
+  let simRunning = true;
+  let simSpeed = 1;
+  let simInterval = null;
+  let selectedRackId = 5; // Default Rack B06
+
+  let racks = [];
+  let riskHistory = [];
+  let logs = [];
+
+  // ─── WORKLOAD & XGB ENGINE ───
+  function n() {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  }
+
+  function generateWorkload(i, ep, baseLoad=0.6, noise=0.12) {
+    const timeOfDay = 0.85 + 0.15 * Math.sin(ep * 0.05);
+    const zoneMultiplier = i < 4 ? 0.9 : i < 8 ? 1.25 : 0.85;
+    const burst = (ep % 20 === 0 && i === 5) ? 1.6 : 1.0;
+    const rackBias = 0.8 + (i % 4) * 0.1;
+
+    const cpu = Math.min(99, Math.max(10, baseLoad * 100 * zoneMultiplier * timeOfDay * burst * rackBias + n() * 12));
+    const gpu = Math.min(99, Math.max(5, cpu * 0.88 + n() * 10 + (i % 3 === 0 ? 12 : 3)));
+    const memory = Math.min(99, Math.max(25, 38 + cpu * 0.38 + n() * 7));
+    const diskIO = Math.min(99, Math.max(3, cpu * 0.28 + n() * 9));
+    const network = Math.min(99, Math.max(5, cpu * 0.22 + n() * 12));
+
+    return { cpu, gpu, memory, diskIO, network };
+  }
+
+  function computeGNNEmbeddings(rackFeatures) {
+    const embeddings = [];
+    const adjList = Array.from({length: NUM_RACKS}, () => []);
+    GNN_EDGES.forEach(([a,b]) => { adjList[a].push(b); adjList[b].push(a); });
+
+    for (let i = 0; i < NUM_RACKS; i++) {
+      const self = rackFeatures[i];
+      const neighbors = adjList[i].map(j => rackFeatures[j]);
+      const neighborHeat = neighbors.length > 0
+        ? neighbors.reduce((s, n) => s + (n.cpu * 0.6 + n.gpu * 0.4), 0) / neighbors.length
+        : 0;
+      const selfHeat = self.cpu * 0.6 + self.gpu * 0.4;
+      const embedding = (selfHeat * 0.7 + neighborHeat * 0.3) / 100;
+      embeddings.push(parseFloat(embedding.toFixed(4)));
+    }
+    return embeddings;
+  }
+
+  function xgbPredict(features) {
+    let score = 0.18;
+    // Simple tree ensemble predictor
+    const templates = [[0, 0.7, 0.05, 0.35], [1, 0.75, 0.04, 0.30], [5, 0.65, 0.03, 0.28]];
+    for (let t = 0; t < 15; t++) {
+      const b = templates[t % templates.length];
+      score += 0.1 * ((features[b[0]] || 0) > b[1] ? b[3] : b[2]);
+    }
+    return Math.min(1, Math.max(0, score));
+  }
+
+  function initRacks() {
+    racks = Array.from({length: NUM_RACKS}, (_, i) => {
+      const row = ZONES[i];
+      const rackNum = (i % 4) + 1;
+      return {
+        id: i,
+        name: `${row}0${rackNum}`,
+        fullName: `RACK-${row}0${rackNum}`,
+        zone: `ZONE ${row}`,
+        x: (i % 4 - 1.5) * 110,
+        z: (Math.floor(i / 4) - 1) * 120,
+        cpu: 35, gpu: 25, memory: 40, diskIO: 20, network: 15,
+        gnnEmbed: 0.22,
+        riskScore: 0.24,
+        xgbPred: 0.22,
+        coolingActive: false,
+        overrideEnabled: false,
+        history: Array(40).fill(0.24)
+      };
+    });
+
+    riskHistory = racks.map(r => Array(40).fill(r.riskScore));
+  }
+
+  function tick() {
+    epoch++;
+    simTime++;
+
+    const rawFeatures = racks.map((_, i) => generateWorkload(i, epoch));
+    const gnnEmbeds = computeGNNEmbeddings(rawFeatures);
+
+    let coolingCount = 0;
+    let hotZonesCount = 0;
+    let totalRisk = 0;
+
+    racks.forEach((r, i) => {
+      const f = rawFeatures[i];
+      r.cpu = f.cpu;
+      r.gpu = f.gpu;
+      r.memory = f.memory;
+      r.diskIO = f.diskIO;
+      r.network = f.network;
+      r.gnnEmbed = gnnEmbeds[i];
+
+      const featVec = [f.cpu/100, f.gpu/100, f.memory/100, f.diskIO/100, f.network/100, gnnEmbeds[i]];
+      r.xgbPred = xgbPredict(featVec);
+
+      let risk = r.xgbPred * 0.75 + r.gnnEmbed * 0.25;
+
+      if (r.coolingActive || r.overrideEnabled) {
+        risk *= 0.45;
+        coolingCount++;
+      }
+
+      r.riskScore = parseFloat(risk.toFixed(4));
+      totalRisk += risk;
+
+      r.coolingActive = (risk > 0.72) || r.overrideEnabled;
+
+      if (risk > 0.55) hotZonesCount++;
+
+      r.history.push(r.riskScore);
+      if (r.history.length > 40) r.history.shift();
+    });
+
+    updateTopBar(totalRisk / NUM_RACKS, coolingCount, hotZonesCount);
+    renderInspector();
+  }
+
+  function updateTopBar(avgRisk, coolingCount, hotZones) {
+    document.getElementById('topRiskVal').textContent = `${(avgRisk * 100).toFixed(1)}%`;
+    document.getElementById('topCoolingVal').textContent = `${coolingCount} / 12`;
+    document.getElementById('topHotZonesVal').textContent = hotZones;
+    document.getElementById('topTick').textContent = epoch;
+
+    const m = Math.floor(simTime / 60).toString().padStart(2,'0');
+    const s = (simTime % 60).toString().padStart(2,'0');
+    document.getElementById('topSimTime').textContent = `SIM TIME: 00:${m}:${s}`;
+
+    const banner = document.getElementById('topAlertBanner');
+    if (hotZones >= 3) banner.classList.add('show');
+    else banner.classList.remove('show');
+  }
+
+  // ─── 3D VIEWPORT CANVAS RENDERER ───
+  const canvas = document.getElementById('viewportCanvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+
+  function resizeCanvas() {
+    const parent = canvas.parentElement;
+    width = canvas.width = parent.clientWidth;
+    height = canvas.height = parent.clientHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // Airflow particles
+  const airParticles = Array.from({length: 60}, () => ({
+    x: (Math.random() - 0.5) * 400,
+    y: Math.random() * 200,
+    z: (Math.random() - 0.5) * 300,
+    speed: 1 + Math.random() * 1.5
+  }));
+
+  function draw3DScene() {
+    ctx.clearRect(0, 0, width, height);
+
+    const centerX = width * 0.5;
+    const centerY = height * 0.5 + 20;
+
+    // Floor Grid
+    ctx.strokeStyle = 'rgba(39, 64, 104, 0.25)';
+    ctx.lineWidth = 1;
+    for (let x = -400; x <= 400; x += 50) {
+      ctx.beginPath();
+      ctx.moveTo(centerX + x * 0.7, centerY - 150 * 0.5);
+      ctx.lineTo(centerX + x * 1.1, centerY + 200 * 0.5);
+      ctx.stroke();
+    }
+
+    // Zone Markers HUD
+    ctx.font = '9px var(--font-mono)';
+    ctx.fillStyle = 'rgba(96, 165, 250, 0.6)';
+    ctx.fillText('ZONE A', centerX - 180, centerY - 100);
+    ctx.fillText('ZONE B', centerX, centerY - 100);
+    ctx.fillText('ZONE C', centerX + 180, centerY - 100);
+
+    // Draw Edges
+    GNN_EDGES.forEach(([a,b]) => {
+      const r1 = racks[a];
+      const r2 = racks[b];
+      const p1x = centerX + r1.x * 1.1;
+      const p1y = centerY + r1.z * 0.6;
+      const p2x = centerX + r2.x * 1.1;
+      const p2y = centerY + r2.z * 0.6;
+
+      ctx.strokeStyle = (r1.riskScore > 0.55 || r2.riskScore > 0.55) ? 'rgba(249, 115, 22, 0.5)' : 'rgba(0, 240, 255, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(p1x, p1y);
+      ctx.lineTo(p2x, p2y);
+      ctx.stroke();
+    });
+
+    // Airflow particles around active racks
+    airParticles.forEach(p => {
+      p.y -= p.speed;
+      if (p.y < -50) p.y = 150;
+      const px = centerX + p.x * 1.1;
+      const py = centerY + p.z * 0.6 - p.y * 0.4;
+
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.35)';
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw Racks (3D Cabinet Blocks)
+    racks.forEach(r => {
+      const px = centerX + r.x * 1.1;
+      const py = centerY + r.z * 0.6;
+      const isSelected = (r.id === selectedRackId);
+
+      const rw = 44;
+      const rh = 72;
+
+      let edgeColor = '#3b82f6';
+      let glowColor = 'rgba(59, 130, 246, 0.2)';
+      if (r.riskScore >= 0.75) { edgeColor = '#ef4444'; glowColor = 'rgba(239, 68, 68, 0.5)'; }
+      else if (r.riskScore >= 0.55) { edgeColor = '#f97316'; glowColor = 'rgba(249, 115, 22, 0.4)'; }
+      else if (r.riskScore >= 0.35) { edgeColor = '#f59e0b'; glowColor = 'rgba(245, 158, 11, 0.3)'; }
+
+      if (r.coolingActive) {
+        edgeColor = '#00f0ff';
+        glowColor = 'rgba(0, 240, 255, 0.4)';
+      }
+
+      // Selection Halo
+      if (isSelected) {
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px - rw/2 - 4, py - rh/2 - 4, rw + 8, rh + 8);
+      }
+
+      // Dark Cabinet Body
+      ctx.fillStyle = '#0a1420';
+      ctx.strokeStyle = edgeColor;
+      ctx.lineWidth = isSelected ? 2 : 1.2;
+      ctx.fillRect(px - rw/2, py - rh/2, rw, rh);
+      ctx.strokeRect(px - rw/2, py - rh/2, rw, rh);
+
+      // Server LEDs
+      for (let s = 0; s < 5; s++) {
+        const sy = py - rh/2 + 8 + s * 12;
+        ctx.fillStyle = (r.coolingActive && s%2===0) ? '#00f0ff' : (s===1 && r.riskScore>0.55 ? '#ef4444' : '#1e3a8a');
+        ctx.fillRect(px - rw/2 + 4, sy, rw - 8, 4);
+      }
+
+      // Rack Label HUD
+      ctx.font = '10px var(--font-mono)';
+      ctx.fillStyle = isSelected ? '#00f0ff' : '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.fillText(r.name, px, py - rh/2 - 6);
+    });
+
+    requestAnimationFrame(draw3DScene);
+  }
+
+  // Click detection on Canvas for Rack Selection
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const centerX = width * 0.5;
+    const centerY = height * 0.5 + 20;
+
+    racks.forEach(r => {
+      const px = centerX + r.x * 1.1;
+      const py = centerY + r.z * 0.6;
+      if (Math.abs(mx - px) < 25 && Math.abs(my - py) < 40) {
+        selectedRackId = r.id;
+        renderInspector();
+      }
+    });
+  });
+
+  // ─── RENDER RIGHT INSPECTOR PANEL ───
+  function renderInspector() {
+    const panel = document.getElementById('inspectorPanel');
+    const r = racks[selectedRackId] || racks[0];
+
+    let riskBadgeClass = 'color:var(--status-low)';
+    let riskText = 'LOW';
+    if (r.riskScore >= 0.75) { riskBadgeClass = 'color:var(--status-crit)'; riskText = 'CRITICAL'; }
+    else if (r.riskScore >= 0.55) { riskBadgeClass = 'color:var(--status-high)'; riskText = 'HIGH'; }
+    else if (r.riskScore >= 0.35) { riskBadgeClass = 'color:var(--status-med)'; riskText = 'MEDIUM'; }
+
+    panel.innerHTML = `
+      <div>
+        <div class="panel-section-title">SELECTED RACK INSPECTOR</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="font-size:20px; font-weight:900;">${r.fullName}</h2>
+          <span class="mono" style="font-size:12px; font-weight:700; ${riskBadgeClass}">${riskText} ${(r.riskScore*100).toFixed(0)}%</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${r.zone} · Node ${r.id}</div>
+      </div>
+
+      <!-- TELEMETRY BREAKDOWN -->
+      <div class="inspector-card">
+        <div class="panel-section-title" style="margin-bottom:10px;">SOFTWARE TELEMETRY</div>
+        <div class="stat-row">
+          <span class="stat-label">CPU Utilization</span>
+          <span class="stat-val mono">${r.cpu.toFixed(1)}%</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${r.cpu}%; background:var(--brand-accent);"></div></div>
+
+        <div class="stat-row" style="margin-top:8px;">
+          <span class="stat-label">GPU Utilization</span>
+          <span class="stat-val mono">${r.gpu.toFixed(1)}%</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${r.gpu}%; background:var(--brand-blue);"></div></div>
+
+        <div class="stat-row" style="margin-top:8px;">
+          <span class="stat-label">Memory Utilization</span>
+          <span class="stat-val mono">${r.memory.toFixed(1)}%</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${r.memory}%; background:#8b5cf6;"></div></div>
+
+        <div class="stat-row" style="margin-top:8px;">
+          <span class="stat-label">Disk I/O</span>
+          <span class="stat-val mono">${r.diskIO.toFixed(1)}%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Network I/O</span>
+          <span class="stat-val mono">${r.network.toFixed(1)}%</span>
+        </div>
+      </div>
+
+      <!-- MODEL INFERENCE BREAKDOWN -->
+      <div class="inspector-card">
+        <div class="panel-section-title" style="margin-bottom:8px;">PREDICTION ENGINE INFERENCE</div>
+        <div class="stat-row">
+          <span class="stat-label">XGBoost Prediction</span>
+          <span class="stat-val mono">${(r.xgbPred*100).toFixed(1)}%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">GNN Spatial Embed</span>
+          <span class="stat-val mono">${r.gnnEmbed.toFixed(4)}</span>
+        </div>
+        <div class="stat-row" style="border-top:1px solid var(--border-color); padding-top:6px; margin-top:4px;">
+          <span class="stat-label" style="font-weight:700;">Composite Risk</span>
+          <span class="stat-val mono" style="color:var(--brand-primary);">${(r.riskScore*100).toFixed(1)}%</span>
+        </div>
+      </div>
+
+      <!-- AI THERMAL INSIGHT -->
+      <div class="inspector-card">
+        <div class="panel-section-title" style="margin-bottom:6px;">AI THERMAL INSIGHT</div>
+        <p style="font-size:11px; color:var(--text-secondary); line-height:1.5;">
+          ${r.riskScore > 0.55 ? 'Risk is elevated primarily by sustained CPU/GPU utilization and spatial GNN neighbor heat momentum.' : 'Thermal load nominal. Workload telemetry operating within safety thresholds.'}
+        </p>
+      </div>
+
+      <!-- COOLING CONTROLS -->
+      <div class="inspector-card">
+        <div class="panel-section-title" style="margin-bottom:8px;">COOLING CONTROL OVERRIDE</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">
+          Cooling Status: <strong style="color:${r.coolingActive ? 'var(--brand-primary)' : 'var(--text-muted)'};">${r.coolingActive ? '● ACTIVE' : 'IDLE'}</strong>
+        </div>
+        <div class="btn-grid">
+          <button class="ctrl-btn ctrl-btn-primary" onclick="toggleRackCooling(${r.id})">
+            ${r.overrideEnabled ? 'REMOVE OVERRIDE' : 'ACTIVATE COOLING'}
+          </button>
+          <button class="ctrl-btn" onclick="injectSpikeRack(${r.id})">WORKLOAD SPIKE</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function toggleRackCooling(id) {
+    racks[id].overrideEnabled = !racks[id].overrideEnabled;
+    racks[id].coolingActive = racks[id].overrideEnabled;
+    renderInspector();
+  }
+
+  function injectSpikeRack(id) {
+    racks[id].cpu = 98;
+    racks[id].gpu = 99;
+    tick();
+  }
+
+  function setSpeed(sp) {
+    simSpeed = sp;
+    if (simRunning) {
+      clearInterval(simInterval);
+      simInterval = setInterval(tick, 1000 / simSpeed);
+    }
+  }
+
+  // Init
+  window.onload = () => {
+    initRacks();
+    resizeCanvas();
+    draw3DScene();
+    simInterval = setInterval(tick, 1000);
+  };
+</script>
+</body>
+</html>

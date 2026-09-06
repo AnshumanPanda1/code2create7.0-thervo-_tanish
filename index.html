@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THERVO — Predictive Thermal Intelligence</title>
+  <style>
+    /* ─── RESET & VARS ─── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-dark: #04070f;
+      --bg-surface: #0a0f1d;
+      --bg-card: #0f172a;
+      --bg-card-hover: #15213b;
+      --bg-panel: #141e33;
+
+      --border-color: #1e2d4a;
+      --border-bright: #2d426b;
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --brand-primary: #3b82f6;
+      --brand-accent: #60a5fa;
+
+      --status-yes: #10b981;
+      --status-no: #ef4444;
+      --status-part: #f59e0b;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+    }
+
+    html, body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── FIXED ATMOSPHERIC BACKGROUND CANVAS ─── */
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, #080d1a 0%, #04070f 100%);
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ─── SCROLL CONTENT CONTAINER ─── */
+    .scroll-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+    }
+
+    .scene {
+      min-height: 100vh;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 100px 40px;
+      position: relative;
+      pointer-events: none;
+    }
+
+    .interactive-layer {
+      pointer-events: auto !important;
+    }
+
+    .scene-content {
+      max-width: 960px;
+      width: 100%;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .scene-content.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── TYPOGRAPHY ─── */
+    .hero-title {
+      font-size: 104px;
+      font-weight: 900;
+      letter-spacing: -5px;
+      line-height: 1;
+      margin-bottom: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #475569 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-sub {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--brand-accent);
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-tag {
+      font-size: 20px;
+      color: var(--text-secondary);
+      font-style: italic;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .scene-head {
+      font-size: 46px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+
+    .scene-body {
+      font-size: 18px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 760px;
+      margin: 0 auto 32px auto;
+    }
+
+    /* ─── SOURCE CITATION BADGES ─── */
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #93c5fd;
+      background: rgba(30, 58, 138, 0.35);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .source-badge:hover {
+      background: rgba(30, 58, 138, 0.7);
+      color: #ffffff;
+      border-color: var(--brand-primary);
+    }
+
+    .source-badge-sim {
+      color: #cbd5e1;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid #475569;
+    }
+
+    .source-badge-bench {
+      color: #fef08a;
+      background: rgba(113, 63, 18, 0.35);
+      border: 1px solid rgba(234, 179, 8, 0.4);
+    }
+
+    .badge-overlap {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fde047;
+      border: 1px solid #eab308;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+    }
+
+    /* ─── GLASS CARDS ─── */
+    .glass-card {
+      background: rgba(10, 15, 29, 0.85);
+      border: 1px solid rgba(45, 66, 107, 0.4);
+      border-radius: 16px;
+      padding: 32px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      text-align: left;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    .big-num {
+      font-size: 54px;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      letter-spacing: -2px;
+      line-height: 1;
+      color: var(--text-primary);
+    }
+
+    .num-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    /* ─── PRIOR ART & LITERATURE ACCORDIONS ─── */
+    .prior-art-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 32px;
+    }
+
+    .prior-art-item {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(45, 66, 107, 0.4);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-align: left;
+    }
+
+    .prior-art-item:hover, .prior-art-item.expanded {
+      border-color: var(--brand-primary);
+      background: rgba(20, 30, 51, 0.95);
+    }
+
+    .prior-art-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .prior-art-body {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .prior-art-item.expanded .prior-art-body {
+      display: block;
+    }
+
+    .capability-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-right: 6px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+
+    .cap-yes { background: rgba(16, 185, 129, 0.15); color: var(--status-yes); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .cap-no { background: rgba(239, 68, 68, 0.15); color: var(--status-no); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .cap-part { background: rgba(245, 158, 11, 0.15); color: var(--status-part); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    /* ─── MATRIX TABLE ─── */
+    .matrix-container {
+      overflow-x: auto;
+      background: rgba(10, 15, 29, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-top: 32px;
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .matrix-table th, .matrix-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      white-space: nowrap;
+    }
+
+    .matrix-table th {
+      background: var(--bg-panel);
+      color: var(--text-secondary);
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .matrix-table tr:hover {
+      background: rgba(30, 58, 138, 0.2);
+    }
+
+    /* ─── CONTROLS FOR DEMO ─── */
+    .ctrl-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 12px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn-action {
+      background: var(--brand-primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-action:hover { background: #2563eb; }
+
+    .btn-secondary {
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text-primary);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover { background: rgba(51, 65, 85, 0.9); }
+
+    /* PIPELINE STAGES */
+    .pipeline-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .pipeline-step {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .pipeline-step:hover {
+      border-color: var(--brand-primary);
+      background: rgba(30, 58, 138, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FIXED CANVAS BACKGROUND (SUBTLE TELEMETRY PARTICLES & GRID LINES ONLY) -->
+  <div id="canvas-container">
+    <canvas id="dataCenterCanvas"></canvas>
+  </div>
+
+  <!-- SCROLLABLE CINEMATIC NARRATIVE -->
+  <div class="scroll-container">
+
+    <!-- ─── SCENE 1: THE HERO (ULTRA MINIMAL & ATMOSPHERIC) ─── -->
+    <div class="scene" id="scene-1">
+      <div class="scene-content active">
+        <h1 class="hero-title">THERVO</h1>
+        <div class="hero-sub">Predictive Thermal Intelligence</div>
+        <div class="hero-tag">"Predict the heat before you have to cool it."</div>
+
+        <div style="margin-top:80px; font-family:var(--font-mono); font-size:12px; color:var(--text-muted); letter-spacing:1px;">
+          Scroll down to explore ↓
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 2: THE PROBLEM ─── -->
+    <div class="scene" id="scene-2">
+      <div class="scene-content">
+        <div class="scene-head">AI workloads are making data centers increasingly energy intensive.</div>
+
+        <div class="grid-3 interactive-layer" style="margin-top:32px;">
+          <div class="glass-card">
+            <div class="big-num">649 TWh</div>
+            <div class="num-label">Projected U.S. data-center electricity consumption in 2030</div>
+            <a href="https://eta.lbl.gov" target="_blank" class="source-badge">Source: Lawrence Berkeley National Laboratory, 2025 Update</a>
+          </div>
+
+          <div class="glass-card">
+            <div class="big-num">11.8%</div>
+            <div class="num-label">Share of U.S. electricity in the LBNL reference case</div>
+            <a href="https://eta.lbl.gov" target="_blank" class="source-badge">Source: Lawrence Berkeley National Laboratory, 2025 Update</a>
+          </div>
+
+          <div class="glass-card">
+            <div class="big-num">UP TO 40%</div>
+            <div class="num-label">Cooling share of total data-center energy consumption</div>
+            <a href="https://www.energy.gov/articles/doe-announces-42-million-develop-high-performance-cooling-systems-data-centers" target="_blank" class="source-badge">Source: U.S. Department of Energy</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 3: THE PROBLEM WITH WAITING ─── -->
+    <div class="scene" id="scene-3">
+      <div class="scene-content">
+        <div class="scene-head" style="color:var(--status-no);">Workload Spike Detected → Physical Thermal Lag</div>
+        <div style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary); margin-bottom:24px;">
+          WORKLOAD SPIKE ↓ HEAT BUILDS ↓ TEMPERATURE RISES ↓ SENSOR DETECTS ↓ COOLING RESPONDS
+        </div>
+
+        <div class="glass-card interactive-layer" style="text-align:center; max-width:640px; margin:0 auto;">
+          <div style="font-size:24px; font-weight:800; color:var(--text-primary); margin-bottom:12px;">
+            "What if we didn't wait for the heat?"
+          </div>
+          <p style="font-size:16px; color:var(--brand-accent);">
+            What if the workload itself was an early thermal signal?
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 4: THERVO ─── -->
+    <div class="scene" id="scene-4">
+      <div class="scene-content">
+        <div class="scene-head">Software Telemetry as an Early Thermal Signal</div>
+
+        <div class="glass-card interactive-layer" style="max-width:760px; margin:0 auto;">
+          <div style="font-size:12px; font-weight:700; color:var(--brand-accent); font-family:var(--font-mono); margin-bottom:12px;">TELEMETRY STREAMS INGESTED</div>
+          <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:13px; margin-bottom:20px;">
+            <span>• CPU Util</span>
+            <span>• GPU Util</span>
+            <span>• Memory Util</span>
+            <span>• Disk I/O</span>
+            <span>• Network I/O</span>
+          </div>
+          <p style="font-size:15px; color:var(--text-primary); line-height:1.6;">
+            THERVO uses software telemetry already generated by computing infrastructure to predict thermal risk.
+          </p>
+          <div style="margin-top:14px; font-size:12px; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+            THERVO does not require additional physical temperature sensors for its predictive layer. Existing physical sensors can remain the ground truth and safety layer.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 5: THE THERVO ENGINE ─── -->
+    <div class="scene" id="scene-5">
+      <div class="scene-content">
+        <div class="scene-head">The THERVO Predictive Pipeline</div>
+
+        <div class="pipeline-flow interactive-layer" style="max-width:760px; margin:0 auto;">
+          <div class="pipeline-step" onclick="alert('Stage 01: Ingests 5 normalized metrics (cpu_norm, gpu_norm, mem_norm, disk_io_norm, net_io_norm).')">
+            <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand-accent);">01 WORKLOAD TELEMETRY</span>
+            <span style="font-size:12px; color:var(--text-muted);">5 Raw System Metrics</span>
+          </div>
+          <div class="pipeline-step" onclick="alert('Stage 02: heat_norm = 0.6 × CPU_norm + 0.4 × GPU_norm.')">
+            <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand-accent);">02 THERMAL PROXY</span>
+            <span style="font-size:12px; color:var(--text-muted);">heat_norm = 0.6 CPU + 0.4 GPU</span>
+          </div>
+          <div class="pipeline-step" onclick="alert('Stage 03: 12 Racks, 18 Topology Edges, 3 Zones graph risk diffusion.')">
+            <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand-accent);">03 TOPOLOGY-AWARE PROPAGATION</span>
+            <span style="font-size:12px; color:var(--text-muted);">Graph Adjacency Edges</span>
+          </div>
+          <div class="pipeline-step" onclick="alert('Stage 04: Trained on 15 production features from frozen dataset_v1 (8,311 rows).')">
+            <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand-accent);">04 XGBOOST RISK PREDICTION</span>
+            <span style="font-size:12px; color:var(--text-muted);">15 Production Features</span>
+          </div>
+          <div class="pipeline-step" onclick="alert('Stage 05: Weighted composite risk scale 0.0 to 1.0 (LOW <35%, MED 35-55%, HIGH 55-75%, CRIT ≥75%).')">
+            <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand-accent);">05 COMPOSITE THERMAL RISK</span>
+            <span style="font-size:12px; color:var(--text-muted);">Composite Risk Scoring</span>
+          </div>
+          <div class="pipeline-step" onclick="alert('Stage 06: Automatic targeted cooling trigger at risk threshold = 0.72.')">
+            <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand-accent);">06 TARGETED COOLING</span>
+            <span style="font-size:12px; color:var(--text-muted);">Threshold Trigger = 0.72</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 6: HEAT MOVES THROUGH THE DATA CENTER ─── -->
+    <div class="scene" id="scene-6">
+      <div class="scene-content">
+        <div class="scene-head">Thermal Risk is Spatial</div>
+        <div class="scene-body">
+          Watch heat risk propagate across adjacent topology edges in real-time. Neighboring equipment influences local thermal load.
+        </div>
+        <div class="glass-card interactive-layer" style="max-width:400px; margin:0 auto; text-align:center;">
+          <div style="font-size:12px; font-family:var(--font-mono); color:var(--brand-accent);">AFFECTED RACK (RACK 06)</div>
+          <div class="big-num" id="topoRiskText" style="color:var(--status-no); margin:8px 0;">73%</div>
+          <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">
+            Propagating to 4 adjacent topology edges
+          </div>
+          <a href="#scene-6" class="source-badge source-badge-sim">Topology-aware risk propagation model</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 7: THE BIG DEMO ─── -->
+    <div class="scene" id="scene-7">
+      <div class="scene-content">
+        <div class="scene-head">Live Interactive THERVO Prototype</div>
+
+        <div class="glass-card interactive-layer" style="max-width:850px; margin:0 auto;">
+          <div class="ctrl-bar">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <button class="btn-action" id="demoPlayBtn" onclick="toggleDemoSim()">▶ Run</button>
+              <button class="btn-secondary" onclick="injectDemoSpike()">⚡ Inject Workload Spike</button>
+              <button class="btn-secondary" onclick="coolDemoAll()">❄ Cool Critical</button>
+            </div>
+            <div>
+              <span class="source-badge source-badge-sim">Interactive THERVO prototype simulation</span>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; margin-top:16px;" id="demoGrid">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 8: WITHOUT THERVO vs WITH THERVO ─── -->
+    <div class="scene" id="scene-8">
+      <div class="scene-content">
+        <div class="scene-head">WITHOUT THERVO vs WITH THERVO</div>
+
+        <div class="grid-2 interactive-layer" style="margin-top:24px;">
+          <div class="glass-card">
+            <div style="font-size:12px; font-weight:700; color:var(--text-muted); font-family:var(--font-mono);">BASELINE PARADIGM</div>
+            <h3 style="font-size:22px; font-weight:800; margin-top:4px;">WITHOUT THERVO</h3>
+            <p style="font-size:13px; color:var(--text-secondary); margin-top:8px;">Blanket / Always-On Cooling Model</p>
+            <div style="margin-top:16px; font-family:var(--font-mono); font-size:13px; display:flex; flex-direction:column; gap:6px;">
+              <div>• Racks Cooled: <strong style="color:var(--status-no);">12 / 12 (100%)</strong></div>
+              <div>• Capacity Utilized: <strong style="color:var(--status-no);">100% Constant</strong></div>
+            </div>
+          </div>
+
+          <div class="glass-card" style="border-color:var(--brand-primary);">
+            <div style="font-size:12px; font-weight:700; color:var(--brand-accent); font-family:var(--font-mono);">THERVO PREDICTIVE PARADIGM</div>
+            <h3 style="font-size:22px; font-weight:800; margin-top:4px;">WITH THERVO</h3>
+            <p style="font-size:13px; color:var(--brand-accent); margin-top:8px;">Targeted Cooling (Trigger 0.72)</p>
+            <div style="margin-top:16px; font-family:var(--font-mono); font-size:13px; display:flex; flex-direction:column; gap:6px;">
+              <div>• Avg Racks Cooled: <strong style="color:var(--status-yes);">3.8 / 12 (31.6%)</strong></div>
+              <div>• Modeled Optimization: <strong style="color:var(--status-yes);">~35% Cooling Load Red.</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <span class="source-badge source-badge-sim">Prototype simulation estimate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 9: WHERE DOES THERVO FIT? (INTERACTIVE LITERATURE SURVEY) ─── -->
+    <div class="scene" id="scene-9">
+      <div class="scene-content">
+        <div class="scene-head">Where does THERVO fit?</div>
+        <div class="scene-body">
+          Predictive cooling is not new. Our difference is where the prediction starts and how thermal risk is represented.
+        </div>
+
+        <!-- INTERACTIVE PRIOR ART ITEMS -->
+        <div class="prior-art-list interactive-layer">
+
+          <!-- 1. GOOGLE DEEPMIND -->
+          <div class="prior-art-item" onclick="togglePriorArt(this)">
+            <div class="prior-art-header">
+              <div>
+                <strong style="font-size:16px; color:var(--text-primary);">1. Google DeepMind</strong>
+                <div style="margin-top:4px;">
+                  <span class="capability-tag cap-yes">✓ AI-based cooling</span>
+                  <span class="capability-tag cap-yes">✓ Predictive control</span>
+                  <span class="capability-tag cap-yes">✓ Physical sensors</span>
+                  <span class="capability-tag cap-no">✕ Sensor-independent</span>
+                  <span class="capability-tag cap-part">~ Workload awareness</span>
+                </div>
+              </div>
+              <a href="https://deepmind.google/discover/blog/deepmind-ai-reduces-google-data-centre-cooling-bill-by-40/" target="_blank" class="source-badge source-badge-bench" onclick="event.stopPropagation()">[ Source: DeepMind 2016 ]</a>
+            </div>
+            <div class="prior-art-body">
+              <p>Google demonstrated that AI can substantially optimize data-center cooling, using extensive physical sensor infrastructure.</p>
+              <p style="margin-top:8px; color:var(--brand-accent);">THERVO Distinction: THERVO approaches prediction from software-observable workload telemetry rather than requiring an additional thermal sensing layer.</p>
+              <div style="margin-top:8px;">
+                <a href="https://deepmind.google/discover/blog/safety-first-ai-for-autonomous-data-centre-cooling-and-industrial-control/" target="_blank" style="color:var(--brand-accent); text-decoration:underline;">Source 2: DeepMind 2018 Safety-First Control ↗</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. SCHNEIDER ELECTRIC -->
+          <div class="prior-art-item" onclick="togglePriorArt(this)">
+            <div class="prior-art-header">
+              <div>
+                <strong style="font-size:16px; color:var(--text-primary);">2. Schneider Electric (EcoStruxure IT Advisor)</strong>
+                <div style="margin-top:4px;">
+                  <span class="capability-tag cap-yes">✓ Infra Telemetry</span>
+                  <span class="capability-tag cap-yes">✓ Digital Twins</span>
+                  <span class="capability-tag cap-yes">✓ Predictive Analytics</span>
+                  <span class="capability-tag cap-no">✕ Sensor-Independent Inference</span>
+                  <span class="capability-tag cap-no">✕ Lightweight Topology Risk</span>
+                </div>
+              </div>
+              <a href="https://www.se.com" target="_blank" class="source-badge" onclick="event.stopPropagation()">[ Source: Schneider ]</a>
+            </div>
+            <div class="prior-art-body">
+              <p>Schneider focuses on broad infrastructure visibility, digital twins and data-center planning/optimization.</p>
+              <p style="margin-top:8px; color:var(--brand-accent);">THERVO Distinction: Focused specifically on software workload telemetry → thermal inference → rack-level risk → targeted cooling intelligence.</p>
+            </div>
+          </div>
+
+          <!-- 3. VERTIV -->
+          <div class="prior-art-item" onclick="togglePriorArt(this)">
+            <div class="prior-art-header">
+              <div>
+                <strong style="font-size:16px; color:var(--text-primary);">3. Vertiv</strong>
+                <div style="margin-top:4px;">
+                  <span class="capability-tag cap-yes">✓ Intelligent Thermal</span>
+                  <span class="capability-tag cap-yes">✓ Predictive Maintenance</span>
+                  <span class="capability-tag cap-no">✕ Pure Software Predictive Layer</span>
+                  <span class="capability-tag cap-no">✕ Composite Rack Risk Model</span>
+                </div>
+              </div>
+              <a href="https://www.vertiv.com" target="_blank" class="source-badge" onclick="event.stopPropagation()">[ Source: Vertiv ]</a>
+            </div>
+            <div class="prior-art-body">
+              <p>Vertiv's strength is intelligent thermal infrastructure and predictive management of physical data-center systems.</p>
+              <p style="margin-top:8px; color:var(--brand-accent);">THERVO Distinction: Designed as a software intelligence layer that can sit above existing infrastructure.</p>
+            </div>
+          </div>
+
+          <!-- 4. MICROSOFT TAPAS -->
+          <div class="prior-art-item" onclick="togglePriorArt(this)">
+            <div class="prior-art-header">
+              <div>
+                <strong style="font-size:16px; color:var(--text-primary);">4. Microsoft TAPAS</strong>
+                <div style="margin-top:4px;">
+                  <span class="capability-tag cap-yes">✓ Workload Telemetry</span>
+                  <span class="capability-tag cap-yes">✓ GPU Awareness</span>
+                  <span class="capability-tag cap-yes">✓ Thermal Scheduling</span>
+                  <span class="capability-tag cap-no">✕ Sensor-Independent Inference</span>
+                  <span class="capability-tag cap-no">✕ Cooling Control Objective</span>
+                </div>
+              </div>
+              <a href="https://www.microsoft.com/en-us/research/publication/tapas-thermal-and-power-aware-scheduling-for-llm-inference-in-cloud-platforms/" target="_blank" class="source-badge" onclick="event.stopPropagation()">[ Source: Microsoft TAPAS ]</a>
+            </div>
+            <div class="prior-art-body">
+              <p>TAPAS focuses on thermal- and power-aware workload scheduling for LLM inference.</p>
+              <p style="margin-top:8px; color:var(--brand-accent);">THERVO Distinction: Focuses on predicting where thermal risk is emerging and translating that risk into cooling intelligence.</p>
+            </div>
+          </div>
+
+          <!-- 5. DELL - STRONGEST OVERLAP -->
+          <div class="prior-art-item" onclick="togglePriorArt(this)">
+            <div class="prior-art-header">
+              <div>
+                <strong style="font-size:16px; color:var(--text-primary);">5. Dell — US20260030068A1</strong>
+                <span class="badge-overlap" style="margin-left:8px;">STRONGEST OVERLAP</span>
+                <div style="margin-top:4px;">
+                  <span class="capability-tag cap-yes">✓ Workload-Aware</span>
+                  <span class="capability-tag cap-yes">✓ Workload → Thermal Load</span>
+                  <span class="capability-tag cap-yes">✓ Predictive Thermal</span>
+                  <span class="capability-tag cap-part">~ Spatial Modeling</span>
+                  <span class="capability-tag cap-no">✕ Specific THERVO Pipeline</span>
+                </div>
+              </div>
+              <a href="https://patents.google.com/patent/US20260030068A1/en" target="_blank" class="source-badge" onclick="event.stopPropagation()">[ Source: USPTO US20260030068A1 ]</a>
+            </div>
+            <div class="prior-art-body">
+              <p>Dell demonstrates that workload information can be transformed into thermal load and used for predictive thermal management.</p>
+              <p style="margin-top:8px; color:var(--brand-accent);">THERVO Distinction: The disclosed Dell approach has substantial conceptual overlap with workload-aware predictive thermal management. THERVO's differentiation lies in its specific sensor-independent architecture, 15-feature temporal vector, explicit rack-level risk scoring, lightweight topology-aware propagation, and composite decision layer.</p>
+            </div>
+          </div>
+
+          <!-- 6. OTHER PATENTED APPROACHES -->
+          <div class="prior-art-item" onclick="togglePriorArt(this)">
+            <div class="prior-art-header">
+              <div>
+                <strong style="font-size:16px; color:var(--text-primary);">6. Other Workload-Aware Patents (US20260020197A1 & US20260050304A1)</strong>
+                <div style="margin-top:4px;">
+                  <span class="capability-tag cap-yes">✓ Workload Prediction</span>
+                  <span class="capability-tag cap-yes">✓ Dynamic Cooling</span>
+                  <span class="capability-tag cap-part">~ Spatial / POD Modeling</span>
+                  <span class="capability-tag cap-no">✕ Sensor-Independent Predictive Layer</span>
+                </div>
+              </div>
+              <a href="https://patents.google.com" target="_blank" class="source-badge" onclick="event.stopPropagation()">[ Source: USPTO ]</a>
+            </div>
+            <div class="prior-art-body">
+              <p>US20260020197A1 & US20260050304A1 cover workload-based thermal modeling and POD-level spatial effects.</p>
+              <p style="margin-top:8px; color:var(--brand-accent);">THERVO Distinction: Focuses on thermal RISK rather than physical temp prediction, sensor-independent compute inputs, explicit rack topology, and a composite thermal-risk decision layer.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 10: FULL COMPARISON MATRIX ─── -->
+    <div class="scene" id="scene-10">
+      <div class="scene-content">
+        <div class="scene-head">Prior Art Capability Matrix</div>
+
+        <div class="matrix-container interactive-layer">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th>DeepMind</th>
+                <th>Schneider</th>
+                <th>Vertiv</th>
+                <th>TAPAS</th>
+                <th>Dell</th>
+                <th>Patents</th>
+                <th style="color:var(--brand-accent);">THERVO</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Workload Telemetry</td>
+                <td style="color:var(--status-part);">~ Partial</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-part);">~ Partial</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ Primary</td>
+              </tr>
+              <tr>
+                <td>Physical Thermal Sensors</td>
+                <td style="color:var(--status-yes);">✓ Heavy</td>
+                <td style="color:var(--status-yes);">✓ Heavy</td>
+                <td style="color:var(--status-yes);">✓ Heavy</td>
+                <td style="color:var(--status-part);">~ Ground Truth</td>
+                <td style="color:var(--status-part);">~ Sensors</td>
+                <td style="color:var(--status-yes);">✓ Sensors</td>
+                <td style="color:var(--brand-accent);">Safety Layer Only</td>
+              </tr>
+              <tr>
+                <td>Predictive Thermal Intelligence</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ Yes</td>
+              </tr>
+              <tr>
+                <td>Workload → Thermal Inference</td>
+                <td style="color:var(--status-part);">~ Partial</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ Yes (0.6/0.4)</td>
+              </tr>
+              <tr>
+                <td>Rack-Level Thermal Risk</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ 12 Racks</td>
+              </tr>
+              <tr>
+                <td>Temporal Workload Behaviour</td>
+                <td style="color:var(--status-part);">~ Partial</td>
+                <td style="color:var(--status-part);">~ Partial</td>
+                <td style="color:var(--status-part);">~ Partial</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-part);">~ Partial</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ 15 Features</td>
+              </tr>
+              <tr>
+                <td>Topology-Aware Rack Relationships</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-part);">~ Spatial</td>
+                <td style="color:var(--status-part);">~ POD</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ 18 Edges</td>
+              </tr>
+              <tr>
+                <td>Sensor-Independent Predictive Layer</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-no);">✕ No</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ Yes</td>
+              </tr>
+              <tr>
+                <td>Targeted Cooling Intelligence</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-no);">✕ Scheduling</td>
+                <td style="color:var(--status-part);">~ Cooling</td>
+                <td style="color:var(--status-yes);">✓ Cooling</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ Yes (0.72)</td>
+              </tr>
+              <tr>
+                <td>Existing Cooling Integration</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Native</td>
+                <td style="color:var(--status-no);">✕ N/A</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes);">✓ Yes</td>
+                <td style="color:var(--status-yes); font-weight:bold;">✓ Overlay</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:16px; font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">
+          Technical prior-art review — not a legal patentability opinion.
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 11: WHAT IS ACTUALLY NOVEL? ─── -->
+    <div class="scene" id="scene-11">
+      <div class="scene-content">
+        <div class="scene-head">What is Actually Novel?</div>
+
+        <div class="grid-3 interactive-layer" style="margin-top:24px; text-align:left;">
+          <div class="glass-card">
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); font-family:var(--font-mono);">NOT NOVEL BY ITSELF</div>
+            <h3 style="font-size:18px; font-weight:800; margin-top:4px;">AI Cooling</h3>
+            <span class="capability-tag cap-yes" style="margin-top:8px;">✓ Existing Prior Art</span>
+          </div>
+
+          <div class="glass-card">
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); font-family:var(--font-mono);">NOT NOVEL BY ITSELF</div>
+            <h3 style="font-size:18px; font-weight:800; margin-top:4px;">Workload Thermal Prediction</h3>
+            <span class="capability-tag cap-yes" style="margin-top:8px;">✓ Existing Prior Art</span>
+          </div>
+
+          <div class="glass-card" style="border-color:var(--brand-primary);">
+            <div style="font-size:11px; font-weight:700; color:var(--brand-accent); font-family:var(--font-mono);">PROPOSED DIFFERENTIATION</div>
+            <h3 style="font-size:18px; font-weight:800; margin-top:4px;">Combined Pipeline</h3>
+            <p style="font-size:12px; color:var(--text-secondary); margin-top:6px;">
+              Software telemetry + sensor-independent layer + rack risk + topology propagation + targeted cooling.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card interactive-layer" style="margin-top:24px; text-align:center;">
+          <p style="font-size:15px; color:var(--text-primary);">
+            "The potential novelty lies in the specific combination and implementation, not in any single component."
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 12: THE MONEY ─── -->
+    <div class="scene" id="scene-12">
+      <div class="scene-content">
+        <div class="scene-head">Economic Impact Calculator</div>
+        <div class="scene-body">Calculate potential annual facility savings based on verified EIA pricing.</div>
+
+        <div class="grid-2 interactive-layer" style="max-width:800px; margin:0 auto;">
+          <div class="glass-card">
+            <div style="font-size:12px; font-weight:700; color:var(--brand-accent); font-family:var(--font-mono); margin-bottom:12px;">FACILITY INPUTS</div>
+            <div style="margin-bottom:12px; text-align:left;">
+              <label style="font-size:11px; color:var(--text-muted);">IT LOAD (MW):</label>
+              <input type="number" id="scMw" value="10" min="1" max="500" style="width:100%; background:rgba(30,41,59,0.8); border:1px solid #3b4f73; color:#fff; padding:6px 10px; border-radius:4px;" oninput="recalcMoney()">
+            </div>
+            <div style="margin-bottom:12px; text-align:left;">
+              <label style="font-size:11px; color:var(--text-muted);">ELECTRICITY PRICE ($/kWh):</label>
+              <input type="number" id="scPrice" value="0.0862" step="0.001" style="width:100%; background:rgba(30,41,59,0.8); border:1px solid #3b4f73; color:#fff; padding:6px 10px; border-radius:4px;" oninput="recalcMoney()">
+              <a href="https://www.eia.gov" target="_blank" class="source-badge">Source: U.S. EIA 2025 (8.62¢/kWh)</a>
+            </div>
+            <div style="text-align:left;">
+              <label style="font-size:11px; color:var(--text-muted);">MODELED REDUCTION (%):</label>
+              <input type="number" id="scRed" value="10" min="1" max="40" style="width:100%; background:rgba(30,41,59,0.8); border:1px solid #3b4f73; color:#fff; padding:6px 10px; border-radius:4px;" oninput="recalcMoney()">
+            </div>
+          </div>
+
+          <div class="glass-card" style="display:flex; flex-direction:column; justify-content:center; text-align:center;">
+            <div style="font-size:12px; font-weight:700; color:var(--brand-accent); font-family:var(--font-mono);">POTENTIAL ANNUAL SAVINGS</div>
+            <div class="big-num" id="scSavingsDisplay" style="color:var(--status-yes); margin:12px 0;">$604,080 / yr</div>
+            <span class="source-badge source-badge-sim">Scenario estimate — arithmetic model</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 13: WHAT WE HAVE ACTUALLY BUILT ─── -->
+    <div class="scene" id="scene-13">
+      <div class="scene-content">
+        <div class="scene-head">What We Have Actually Built</div>
+
+        <div class="grid-4 interactive-layer" style="margin-bottom:20px;">
+          <div class="glass-card">
+            <div class="big-num">8,311</div>
+            <div class="num-label">Telemetry rows (dataset_v1)</div>
+            <span class="source-badge source-badge-sim">REAL PROJECT DATA</span>
+          </div>
+          <div class="glass-card">
+            <div class="big-num">15</div>
+            <div class="num-label">Production-aligned features</div>
+            <span class="source-badge source-badge-sim">REAL PROJECT DATA</span>
+          </div>
+          <div class="glass-card">
+            <div class="big-num">12 / 18</div>
+            <div class="num-label">Nodes / Topology edges</div>
+            <span class="source-badge source-badge-sim">PROTOTYPE SPEC</span>
+          </div>
+          <div class="glass-card">
+            <div class="big-num">0.72</div>
+            <div class="num-label">Default cooling trigger</div>
+            <span class="source-badge source-badge-sim">PROTOTYPE SPEC</span>
+          </div>
+        </div>
+
+        <div class="glass-card interactive-layer" style="border-color:var(--status-part); text-align:center;">
+          <div style="font-size:16px; font-weight:800; color:var(--status-part);">
+            "Formal field accuracy validation: not yet completed."
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SCENE 14: THE FINAL TRANSFORMATION ─── -->
+    <div class="scene" id="scene-14">
+      <div class="scene-content">
+        <h2 style="font-size:64px; font-weight:900; letter-spacing:-2px; margin-bottom:20px; line-height:1.1;">
+          DON'T WAIT FOR THE RACK TO BECOME HOT.
+        </h2>
+        <div style="font-size:24px; color:var(--text-secondary); max-width:700px; margin:0 auto 40px auto; line-height:1.5;">
+          PREDICT THE RISK.<br>
+          COOL WHAT NEEDS COOLING.<br>
+          LEAVE THE REST ALONE.
+        </div>
+        <div class="hero-title" style="font-size:72px;">THERVO</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── JAVASCRIPT ANIMATION ENGINE ─── -->
+  <script>
+    // ─── CANVAS ATMOSPHERIC ENGINE (SUBTLE PARTICLES & GRID ONLY - NO BACKGROUND DATA RACKS) ───
+    const canvas = document.getElementById('dataCenterCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 12 Rack Objects for Interactive Demo Widgets ONLY
+    const racks = [
+      { id: 1, x: -220, z: -100, cpu: 30, gpu: 20, risk: 0.2, cooling: false },
+      { id: 2, x: -110, z: -100, cpu: 25, gpu: 15, risk: 0.18, cooling: false },
+      { id: 3, x: 0,    z: -100, cpu: 35, gpu: 30, risk: 0.25, cooling: false },
+      { id: 4, x: 110,  z: -100, cpu: 40, gpu: 35, risk: 0.30, cooling: false },
+
+      { id: 5, x: -220, z: 0,    cpu: 45, gpu: 40, risk: 0.35, cooling: false },
+      { id: 6, x: -110, z: 0,    cpu: 95, gpu: 98, risk: 0.88, cooling: true },
+      { id: 7, x: 0,    z: 0,    cpu: 50, gpu: 45, risk: 0.42, cooling: false },
+      { id: 8, x: 110,  z: 0,    cpu: 30, gpu: 25, risk: 0.22, cooling: false },
+
+      { id: 9,  x: -220, z: 100,  cpu: 20, gpu: 15, risk: 0.15, cooling: false },
+      { id: 10, x: -110, z: 100,  cpu: 25, gpu: 20, risk: 0.18, cooling: false },
+      { id: 11, x: 0,    z: 100,  cpu: 35, gpu: 30, risk: 0.24, cooling: false },
+      { id: 12, x: 110,  z: 100,  cpu: 40, gpu: 35, risk: 0.28, cooling: false }
+    ];
+
+    // Subtle Telemetry Particles for Atmospheric Background
+    const particles = Array.from({length: 45}, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      speed: 0.4 + Math.random() * 1.2,
+      alpha: 0.15 + Math.random() * 0.4,
+      size: 1 + Math.random() * 2
+    }));
+
+    let scrollProgress = 0;
+    window.addEventListener('scroll', () => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      scrollProgress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+      updateActiveScene();
+    });
+
+    function updateActiveScene() {
+      const scenes = document.querySelectorAll('.scene');
+      scenes.forEach((sec) => {
+        const top = sec.offsetTop - window.innerHeight * 0.6;
+        const bot = top + sec.offsetHeight;
+        const content = sec.querySelector('.scene-content');
+        if (window.scrollY >= top && window.scrollY < bot) {
+          content?.classList.add('active');
+        } else {
+          content?.classList.remove('active');
+        }
+      });
+    }
+
+    // Render loop (Subtle atmospheric telemetry particles & technical grid ONLY)
+    function render() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Subtle grid lines
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.035)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < width; i += 60) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke();
+      }
+
+      // Floating telemetry particles
+      particles.forEach(p => {
+        p.y -= p.speed;
+        if (p.y < 0) p.y = height;
+        ctx.fillStyle = `rgba(96, 165, 250, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(render);
+    }
+    render();
+
+    // PRIOR ART EXPANDER HANDLER
+    function togglePriorArt(el) {
+      document.querySelectorAll('.prior-art-item').forEach(item => {
+        if (item !== el) item.classList.remove('expanded');
+      });
+      el.classList.toggle('expanded');
+    }
+
+    // DEMO ENGINE
+    let isDemoRunning = false;
+    let demoTimer = null;
+
+    function renderDemoUi() {
+      const grid = document.getElementById('demoGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      racks.forEach(r => {
+        let col = '#10b981';
+        if (r.risk >= 0.75) col = '#ef4444';
+        else if (r.risk >= 0.55) col = '#f97316';
+        else if (r.risk >= 0.35) col = '#f59e0b';
+
+        grid.innerHTML += `
+          <div style="background:rgba(15,23,42,0.8); border:1px solid ${col}; border-radius:6px; padding:8px; font-family:monospace; font-size:10px; text-align:left;">
+            <div style="display:flex; justify-between;"><span>R${r.id<10?'0'+r.id:r.id}</span> <strong style="color:${col}">${(r.risk*100).toFixed(0)}%</strong></div>
+            <div style="color:#64748b; margin-top:2px;">GPU: ${r.gpu}%</div>
+          </div>
+        `;
+      });
+    }
+
+    function toggleDemoSim() {
+      isDemoRunning = !isDemoRunning;
+      const btn = document.getElementById('demoPlayBtn');
+      if (isDemoRunning) {
+        btn.textContent = '⏸ Pause';
+        demoTimer = setInterval(() => {
+          racks.forEach(r => {
+            r.cpu = Math.min(99, Math.max(10, r.cpu + (Math.random() - 0.48)*8));
+            r.gpu = Math.min(99, Math.max(5, r.gpu + (Math.random() - 0.48)*10));
+            const heat = 0.6*(r.cpu/100) + 0.4*(r.gpu/100);
+            r.risk = parseFloat((heat * 0.85 + Math.random()*0.1).toFixed(2));
+            if (r.risk >= 0.72) r.cooling = true;
+            else r.cooling = false;
+          });
+          renderDemoUi();
+        }, 1000);
+      } else {
+        btn.textContent = '▶ Run';
+        clearInterval(demoTimer);
+      }
+    }
+
+    function injectDemoSpike() {
+      racks[5].cpu = 98;
+      racks[5].gpu = 99;
+      racks[5].risk = 0.92;
+      renderDemoUi();
+    }
+
+    function coolDemoAll() {
+      racks.forEach(r => { r.cpu = 20; r.gpu = 15; r.risk = 0.15; r.cooling = false; });
+      renderDemoUi();
+    }
+
+    function recalcMoney() {
+      const mw = parseFloat(document.getElementById('scMw').value) || 10;
+      const price = parseFloat(document.getElementById('scPrice').value) || 0.0862;
+      const red = (parseFloat(document.getElementById('scRed').value) || 10) / 100;
+      const coolMwh = mw * 8760 * 1.50 * 0.40;
+      const savings = coolMwh * price * red;
+      document.getElementById('scSavingsDisplay').textContent = `$${Math.round(savings).toLocaleString()} / yr`;
+    }
+
+    window.onload = () => {
+      renderDemoUi();
+      recalcMoney();
+      updateActiveScene();
+    };
+  </script>
+</body>
+</html>
