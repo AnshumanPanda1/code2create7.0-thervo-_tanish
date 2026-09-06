@@ -1,0 +1,9 @@
+{
+  "name": "THERVO - ACM Native Figma Design Generator",
+  "id": "thervo-acm-figma-generator",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": [
+    "figma"
+  ]
+}
