@@ -1,4 +1,4 @@
-# ❄️ THERV0 — Sensor-Free Predictive Thermal Intelligence & Autonomous Cooling Platform
+# ❄️ THERVO - ACM — Sensor-Free Predictive Thermal Intelligence & Autonomous Cooling Platform
 
 > **Predictive, Software-Driven Thermal Intelligence for High-Density AI & Data Center Clusters.**
 > 
