@@ -45,6 +45,62 @@
     --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
   }
 
+  /* ─── DARK THEME OVERRIDES ─── */
+  [data-theme="dark"] {
+    --bg-app: #0b0f19;
+    --bg-surface: #131b2e;
+    --bg-subtle: #1a243b;
+    --bg-muted: #273552;
+    --border-color: #2e3e5c;
+    --border-light: #1f2d47;
+
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-light: #64748b;
+
+    --brand-primary: #3b82f6;
+    --brand-hover: #60a5fa;
+    --brand-light: #1e293b;
+
+    --risk-low: #22c55e;
+    --risk-low-bg: #064e3b;
+    --risk-low-border: #047857;
+
+    --risk-med: #f59e0b;
+    --risk-med-bg: #451a03;
+    --risk-med-border: #78350f;
+
+    --risk-high: #f97316;
+    --risk-high-bg: #431407;
+    --risk-high-border: #7c2d12;
+
+    --risk-crit: #ef4444;
+    --risk-crit-bg: #450a0a;
+    --risk-crit-border: #7f1d1d;
+  }
+
+  .theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
+    color: var(--text-primary);
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .theme-toggle-btn:hover {
+    background: var(--border-light);
+    border-color: var(--border-color);
+  }
+
   * { margin:0; padding:0; box-sizing:border-box; }
 
   body {
@@ -1426,6 +1482,11 @@
       <span id="thervoSwitchStatusText" class="thervo-status-text">ON</span>
     </div>
 
+    <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleAppTheme()" title="Toggle Light / Dark Mode">
+      <span id="themeToggleIcon">☀️</span>
+      <span id="themeToggleText" class="mono">Light</span>
+    </button>
+
     <div class="user-profile" title="Account Profile">
       <span class="avatar">SR</span>
     </div>
@@ -2363,6 +2424,42 @@
 </main>
 
 <script>
+
+// ─── LIGHT / DARK THEME SYSTEM ───
+let currentTheme = localStorage.getItem('thervo_theme') || 'light';
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('thervo_theme', theme);
+
+  const iconEl = document.getElementById('themeToggleIcon');
+  const textEl = document.getElementById('themeToggleText');
+
+  if (theme === 'dark') {
+    if (iconEl) iconEl.textContent = '🌙';
+    if (textEl) textEl.textContent = 'Dark';
+  } else {
+    if (iconEl) iconEl.textContent = '☀️';
+    if (textEl) textEl.textContent = 'Light';
+  }
+
+  if (typeof initGNNCanvas === 'function') initGNNCanvas();
+  if (typeof drawHistoryChart === 'function') drawHistoryChart();
+  if (typeof drawAIThresholdCurve === 'function') drawAIThresholdCurve();
+}
+
+function toggleAppTheme() {
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  applyTheme(newTheme);
+  if (typeof addLog === 'function') {
+    addLog(`☀️/🌙 Switched app theme to ${newTheme.toUpperCase()} MODE`, 'info');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(currentTheme);
+});
 
 // ─── THERVO VS TRADITIONAL COOLING TOGGLE STATE ───
 let thervoCoolingEnabled = true;
