@@ -47,37 +47,44 @@
 
   /* ─── DARK THEME OVERRIDES ─── */
   [data-theme="dark"] {
-    --bg-app: #0b0f19;
-    --bg-surface: #131b2e;
-    --bg-subtle: #1a243b;
-    --bg-muted: #273552;
-    --border-color: #2e3e5c;
-    --border-light: #1f2d47;
+    --bg-app: #080D18;
+    --bg-surface: #0D1626;
+    --bg-subtle: #111C2E;
+    --bg-muted: #16233A;
+    --bg-primary: #080D18;
+    --bg-secondary: #0D1626;
+    --bg-panel: #111C2E;
+    --bg-elevated: #16233A;
+    --border-color: #30435F;
+    --border-light: #24344D;
+    --border-subtle: #24344D;
+    --border-default: #30435F;
 
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --text-light: #64748b;
+    --text-primary: #F4F7FB;
+    --text-secondary: #AAB8CC;
+    --text-muted: #71819A;
+    --text-light: #71819A;
+    --text-subtle: #AAB8CC;
 
     --brand-primary: #3b82f6;
     --brand-hover: #60a5fa;
-    --brand-light: #1e293b;
+    --brand-light: #16233A;
 
-    --risk-low: #22c55e;
-    --risk-low-bg: #064e3b;
-    --risk-low-border: #047857;
+    --risk-low: #4ADE80;
+    --risk-low-bg: #0B3A2D;
+    --risk-low-border: #0F8F68;
 
-    --risk-med: #f59e0b;
-    --risk-med-bg: #451a03;
-    --risk-med-border: #78350f;
+    --risk-med: #FBBF24;
+    --risk-med-bg: #3A2508;
+    --risk-med-border: #D97706;
 
-    --risk-high: #f97316;
-    --risk-high-bg: #431407;
-    --risk-high-border: #7c2d12;
+    --risk-high: #FB923C;
+    --risk-high-bg: #3B1708;
+    --risk-high-border: #EA580C;
 
-    --risk-crit: #ef4444;
-    --risk-crit-bg: #450a0a;
-    --risk-crit-border: #7f1d1d;
+    --risk-crit: #F87171;
+    --risk-crit-bg: #3A0D12;
+    --risk-crit-border: #DC2626;
   }
 
   /* ─── DARK MODE CONTRAST & VISIBILITY ENHANCEMENTS ─── */
@@ -3400,10 +3407,54 @@ function updateSimTime() {
 }
 
 function getRiskEnterpriseClass(risk) {
-  if (risk < 0.35) return { label: 'LOW', badgeClass: 'risk-low', bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' };
-  if (risk < 0.55) return { label: 'MED', badgeClass: 'risk-med', bg: '#fffbeb', border: '#fde68a', color: '#92400e' };
-  if (risk < 0.75) return { label: 'HIGH', badgeClass: 'risk-high', bg: '#fff7ed', border: '#fed7aa', color: '#9a3412' };
-  return { label: 'CRIT', badgeClass: 'risk-crit', bg: '#fef2f2', border: '#fca5a5', color: '#991b1b' };
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
+
+  if (risk < 0.35) {
+    return {
+      label: 'LOW',
+      badgeClass: 'risk-low',
+      bg: isDark ? '#0B3A2D' : '#f0fdf4',
+      border: isDark ? '#0F8F68' : '#bbf7d0',
+      color: isDark ? '#D1FAE5' : '#166534',
+      valColor: isDark ? '#86EFAC' : '#166534',
+      badgeBg: isDark ? '#082D24' : '#dcfce7',
+      badgeText: isDark ? '#4ADE80' : '#15803d'
+    };
+  }
+  if (risk < 0.55) {
+    return {
+      label: 'MED',
+      badgeClass: 'risk-med',
+      bg: isDark ? '#3A2508' : '#fffbeb',
+      border: isDark ? '#D97706' : '#fde68a',
+      color: isDark ? '#FEF3C7' : '#92400e',
+      valColor: isDark ? '#FBBF24' : '#92400e',
+      badgeBg: isDark ? '#4A2F08' : '#fef3c7',
+      badgeText: isDark ? '#FBBF24' : '#b45309'
+    };
+  }
+  if (risk < 0.75) {
+    return {
+      label: 'HIGH',
+      badgeClass: 'risk-high',
+      bg: isDark ? '#3B1708' : '#fff7ed',
+      border: isDark ? '#EA580C' : '#fed7aa',
+      color: isDark ? '#FFEDD5' : '#9a3412',
+      valColor: isDark ? '#FB923C' : '#9a3412',
+      badgeBg: isDark ? '#4A1D0A' : '#ffedd5',
+      badgeText: isDark ? '#FB923C' : '#c2410c'
+    };
+  }
+  return {
+    label: 'CRIT',
+    badgeClass: 'risk-crit',
+    bg: isDark ? '#3A0D12' : '#fef2f2',
+    border: isDark ? '#DC2626' : '#fca5a5',
+    color: isDark ? '#FEE2E2' : '#991b1b',
+    valColor: isDark ? '#F87171' : '#991b1b',
+    badgeBg: isDark ? '#4A1017' : '#fee2e2',
+    badgeText: isDark ? '#F87171' : '#b91c1c'
+  };
 }
 
 // ─── RENDER FLOOR PLAN ───
@@ -3414,23 +3465,28 @@ function renderFloorPlan() {
   if (!rowA || !rowB || !rowC) return;
 
   rowA.innerHTML = ''; rowB.innerHTML = ''; rowC.innerHTML = '';
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
 
   racks.forEach((rack, i) => {
     const unit = document.createElement('div');
     const displayRisk = rack.displayRiskScore !== undefined ? rack.displayRiskScore : rack.riskScore;
     const ec = getRiskEnterpriseClass(displayRisk);
+    const isSel = (i === selectedRack);
     
-    unit.className = `floor-rack-unit ${i === selectedRack ? 'selected' : ''}`;
+    unit.className = `floor-rack-unit ${isSel ? 'selected' : ''}`;
     unit.style.background = ec.bg;
-    unit.style.borderColor = ec.border;
+    unit.style.borderColor = isSel ? '#3B82F6' : ec.border;
+    if (isSel) {
+      unit.style.boxShadow = isDark ? '0 0 12px rgba(59, 130, 246, 0.5), 0 0 0 2px #3B82F6' : '0 0 0 2px var(--brand-primary)';
+    }
 
     unit.innerHTML = `
       <div class="fru-header">
-        <span class="fru-id">${rack.name.replace('RACK-', '')}</span>
-        <span class="fru-badge ${ec.badgeClass}">${ec.label}</span>
+        <span class="fru-id" style="color:${ec.color}; font-weight:700;">${rack.name.replace('RACK-', '')}</span>
+        <span class="fru-badge ${ec.badgeClass}" style="background:${ec.badgeBg}; color:${ec.badgeText}; border-color:${ec.border};">${ec.label}</span>
       </div>
-      <div class="fru-risk-val">${(displayRisk * 100).toFixed(0)}%</div>
-      ${(rack.coolingActive || rack.overrideEnabled) ? '<span class="fru-cooling">❄ COOLING ACTIVE</span>' : ''}
+      <div class="fru-risk-val" style="color:${ec.valColor}; font-weight:700;">${(displayRisk * 100).toFixed(0)}%</div>
+      ${(rack.coolingActive || rack.overrideEnabled) ? '<span class="fru-cooling" style="color:#60A5FA;">❄ COOLING ACTIVE</span>' : ''}
     `;
 
     unit.addEventListener('click', () => selectRack(i));
@@ -3503,6 +3559,7 @@ function updateFleetDisplay() {
   if (!grid) return;
   grid.innerHTML = '';
 
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
   const displayList = getFilteredSortedRacks();
 
   displayList.forEach(rack => {
@@ -3511,9 +3568,15 @@ function updateFleetDisplay() {
     const displayCpu = rack.displayCpu !== undefined ? rack.displayCpu : rack.cpu;
     const displayGpu = rack.displayGpu !== undefined ? rack.displayGpu : rack.gpu;
     const ec = getRiskEnterpriseClass(displayRisk);
+    const isSel = (i === selectedRack);
     const card = document.createElement('div');
-    card.className = `rack-card ${i === selectedRack ? 'selected' : ''}`;
+    card.className = `rack-card ${isSel ? 'selected' : ''}`;
     card.id = `rack-card-${i}`;
+    card.style.background = ec.bg;
+    card.style.borderColor = isSel ? '#3B82F6' : ec.border;
+    if (isSel) {
+      card.style.boxShadow = isDark ? '0 0 12px rgba(59, 130, 246, 0.5), 0 0 0 2px #3B82F6' : '0 0 0 2px var(--brand-primary)';
+    }
 
     const tooltipText = `Rack ${rack.name} (Zone ${rack.zone})\n` +
       `Risk: ${(displayRisk * 100).toFixed(0)}% (${ec.label})\n` +
@@ -3527,12 +3590,12 @@ function updateFleetDisplay() {
     card.innerHTML = `
       <div class="rack-card-compact">
         <div class="rc-left">
-          <div class="rack-id" style="font-weight:700;">${rack.name}</div>
-          <div class="rack-zone" style="font-size:11px;color:var(--text-subtle);">Zone ${rack.zone}</div>
+          <div class="rack-id" style="font-weight:700; color:${ec.color};">${rack.name}</div>
+          <div class="rack-zone" style="font-size:11px; color:${isDark ? '#AAB8CC' : 'var(--text-subtle)'};">Zone ${rack.zone}</div>
         </div>
-        <div class="rc-right">
-          ${(rack.coolingActive || rack.overrideEnabled) ? '<span class="cooling-dot-badge" title="Cooling Active">❄</span>' : ''}
-          <div class="rack-risk-badge ${ec.badgeClass}">${(displayRisk * 100).toFixed(0)}%</div>
+        <div class="rc-right" style="display:flex; align-items:center; gap:6px;">
+          ${(rack.coolingActive || rack.overrideEnabled) ? '<span class="cooling-dot-badge" style="color:#60A5FA;" title="Cooling Active">❄</span>' : ''}
+          <div class="rack-risk-badge ${ec.badgeClass}" style="background:${ec.badgeBg}; color:${ec.badgeText}; border:1px solid ${ec.border}; font-weight:700; padding:2px 8px; border-radius:12px; font-size:11px;">${(displayRisk * 100).toFixed(0)}%</div>
         </div>
       </div>
     `;
@@ -3610,10 +3673,11 @@ function drawGNNGraph() {
   ctx.clearRect(0, 0, W, H);
 
   // Background Grid
-  ctx.fillStyle = '#ffffff';
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
+  ctx.fillStyle = isDark ? '#0D1626' : '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  ctx.strokeStyle = '#f1f5f9';
+  ctx.strokeStyle = isDark ? '#1F2E45' : '#f1f5f9';
   ctx.lineWidth = 1;
   for (let x = 0; x < W; x += 40) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
@@ -3764,25 +3828,26 @@ function updateSelectedDetail() {
   const neighborInfluenceVal = (rack.gnnEmbed * 12).toFixed(0);
   recNeighbor.textContent = `+${neighborInfluenceVal}%`;
 
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
   if (rack.coolingActive || rack.overrideEnabled) {
     recBadge.textContent = 'Maintain Cooling';
-    recBadge.style.color = '#0284c7';
-    recBadge.style.background = '#e0f2fe';
+    recBadge.style.color = isDark ? '#60A5FA' : '#0284c7';
+    recBadge.style.background = isDark ? '#16233A' : '#e0f2fe';
     recText.textContent = `Maintain active cooling on ${rack.name}. Predicted thermal risk is trending ${isRising ? 'upward' : 'downward'} and neighbor propagation influence is +${neighborInfluenceVal}%.`;
   } else if (displayRisk > 0.58) {
     recBadge.textContent = 'Proactive Cooling Active';
-    recBadge.style.color = 'var(--risk-high)';
-    recBadge.style.background = 'var(--risk-high-bg)';
+    recBadge.style.color = isDark ? '#FB923C' : 'var(--risk-high)';
+    recBadge.style.background = isDark ? '#3B1708' : 'var(--risk-high-bg)';
     recText.textContent = `${rack.name} has crossed the 58% automated cooling threshold. Rapid thermal intervention is engaged to prevent hotspot propagation.`;
   } else if (displayRisk > 0.45) {
     recBadge.textContent = 'Elevated Monitoring';
-    recBadge.style.color = 'var(--risk-med)';
-    recBadge.style.background = 'var(--risk-med-bg)';
+    recBadge.style.color = isDark ? '#FBBF24' : 'var(--risk-med)';
+    recBadge.style.background = isDark ? '#3A2508' : 'var(--risk-med-bg)';
     recText.textContent = `Proactive cooling monitoring for ${rack.name}. Workload intensity is elevating thermal risk.`;
   } else {
     recBadge.textContent = 'Normal Operation';
-    recBadge.style.color = 'var(--risk-low)';
-    recBadge.style.background = 'var(--risk-low-bg)';
+    recBadge.style.color = isDark ? '#4ADE80' : 'var(--risk-low)';
+    recBadge.style.background = isDark ? '#0B3A2D' : 'var(--risk-low-bg)';
     recText.textContent = `Thermal parameters are nominal. No active intervention required for ${rack.name}.`;
   }
 
@@ -3815,9 +3880,10 @@ function drawHistoryChart() {
   }
 
   // Gridlines
-  ctx.strokeStyle = '#f1f5f9';
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
+  ctx.strokeStyle = isDark ? '#1F2E45' : '#f1f5f9';
   ctx.lineWidth = 1;
-  ctx.fillStyle = '#94a3b8';
+  ctx.fillStyle = isDark ? '#AAB8CC' : '#94a3b8';
   ctx.font = '500 9px "JetBrains Mono", monospace';
   for (let y = 0; y <= 4; y++) {
     const yp = H - 20 - (y / 4) * (H - 30);
@@ -4415,33 +4481,38 @@ function drawAIThresholdCurve() {
   const rLow = plotW * 0.35;
   const rMed = plotW * 0.55;
   const rHigh = plotW * 0.75;
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
 
-  // 0-35% Low
-  ctx.fillStyle = 'rgba(220, 252, 231, 0.35)';
-  ctx.fillRect(padL, padT, rLow, plotH);
-
-  // 35-55% Medium
-  ctx.fillStyle = 'rgba(254, 243, 199, 0.35)';
-  ctx.fillRect(padL + rLow, padT, rMed - rLow, plotH);
-
-  // 55-75% High
-  ctx.fillStyle = 'rgba(255, 237, 213, 0.35)';
-  ctx.fillRect(padL + rMed, padT, rHigh - rMed, plotH);
-
-  // 75-100% Critical
-  ctx.fillStyle = 'rgba(254, 226, 226, 0.35)';
-  ctx.fillRect(padL + rHigh, padT, plotW - rHigh, plotH);
+  if (isDark) {
+    ctx.fillStyle = 'rgba(11, 58, 45, 0.45)';
+    ctx.fillRect(padL, padT, rLow, plotH);
+    ctx.fillStyle = 'rgba(58, 37, 8, 0.45)';
+    ctx.fillRect(padL + rLow, padT, rMed - rLow, plotH);
+    ctx.fillStyle = 'rgba(59, 23, 8, 0.45)';
+    ctx.fillRect(padL + rMed, padT, rHigh - rMed, plotH);
+    ctx.fillStyle = 'rgba(58, 13, 18, 0.45)';
+    ctx.fillRect(padL + rHigh, padT, plotW - rHigh, plotH);
+  } else {
+    ctx.fillStyle = 'rgba(220, 252, 231, 0.35)';
+    ctx.fillRect(padL, padT, rLow, plotH);
+    ctx.fillStyle = 'rgba(254, 243, 199, 0.35)';
+    ctx.fillRect(padL + rLow, padT, rMed - rLow, plotH);
+    ctx.fillStyle = 'rgba(255, 237, 213, 0.35)';
+    ctx.fillRect(padL + rMed, padT, rHigh - rMed, plotH);
+    ctx.fillStyle = 'rgba(254, 226, 226, 0.35)';
+    ctx.fillRect(padL + rHigh, padT, plotW - rHigh, plotH);
+  }
 
   // Region Labels
   ctx.font = '9px Inter, sans-serif';
-  ctx.fillStyle = '#64748b';
+  ctx.fillStyle = isDark ? '#AAB8CC' : '#64748b';
   ctx.fillText('LOW', padL + 10, padT + 14);
   ctx.fillText('MEDIUM', padL + rLow + 10, padT + 14);
   ctx.fillText('HIGH', padL + rMed + 10, padT + 14);
   ctx.fillText('CRITICAL', padL + rHigh + 10, padT + 14);
 
   // Axis Lines
-  ctx.strokeStyle = '#cbd5e1';
+  ctx.strokeStyle = isDark ? '#30435F' : '#cbd5e1';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH);
@@ -4613,6 +4684,7 @@ function updateThermalMapView() {
   const container = document.getElementById('thermalMapZonesGrid');
   if (!container) return;
   
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
   const zones = ['A', 'B', 'C'];
   const zoneNames = { 'A': 'Row A (Cold Aisle 1)', 'B': 'Row B (Hot Aisle)', 'C': 'Row C (Cold Aisle 2)' };
   
@@ -4631,22 +4703,22 @@ function updateThermalMapView() {
       const ec = getRiskEnterpriseClass(r.riskScore);
       const isSel = (r.id === selectedRack);
       html += `
-        <div onclick="selectRack(${r.id})" style="background:${ec.bg}; border:1px solid ${ec.border}; border-radius:6px; padding:10px; cursor:pointer; transition:all 0.15s; ${isSel ? 'box-shadow:0 0 0 2px var(--brand-primary);' : ''}">
+        <div onclick="selectRack(${r.id})" style="background:${ec.bg}; border:1px solid ${isSel ? '#3B82F6' : ec.border}; border-radius:6px; padding:10px; cursor:pointer; transition:all 0.15s; ${isSel ? (isDark ? 'box-shadow:0 0 12px rgba(59, 130, 246, 0.5), 0 0 0 2px #3B82F6;' : 'box-shadow:0 0 0 2px var(--brand-primary);') : ''}">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <div>
               <span style="font-weight:700; font-size:13px; color:${ec.color};">${r.name}</span>
-              <span style="font-size:11px; color:var(--text-subtle); margin-left:6px;">Node ${r.id}</span>
+              <span style="font-size:11px; color:${isDark ? '#AAB8CC' : 'var(--text-subtle)'}; margin-left:6px;">Node ${r.id}</span>
             </div>
-            <div class="rack-risk-badge ${ec.badgeClass}">${ec.label} ${(r.riskScore*100).toFixed(0)}%</div>
+            <div class="rack-risk-badge ${ec.badgeClass}" style="background:${ec.badgeBg}; color:${ec.badgeText}; border:1px solid ${ec.border}; font-weight:700;">${ec.label} ${(r.riskScore*100).toFixed(0)}%</div>
           </div>
-          <div style="display:flex; gap:12px; font-size:11px; color:var(--text-secondary); margin-bottom:4px;">
+          <div style="display:flex; gap:12px; font-size:11px; color:${isDark ? '#AAB8CC' : 'var(--text-secondary)'}; margin-bottom:4px;">
             <span>CPU: <strong>${r.cpu.toFixed(0)}%</strong></span>
             <span>GPU: <strong>${r.gpu.toFixed(0)}%</strong></span>
             <span>MEM: <strong>${r.memory.toFixed(0)}%</strong></span>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
-            <span style="font-size:10px; color:var(--text-subtle);">GNN Embed: ${r.gnnEmbed.toFixed(3)}</span>
-            ${(r.coolingActive || r.overrideEnabled) ? '<span style="color:#0284c7; font-weight:700; font-size:10px;">❄ COOLING ACTIVE</span>' : '<span style="color:var(--text-subtle); font-size:10px;">Standby</span>'}
+            <span style="font-size:10px; color:${isDark ? '#71819A' : 'var(--text-subtle)'};">GNN Embed: ${r.gnnEmbed.toFixed(3)}</span>
+            ${(r.coolingActive || r.overrideEnabled) ? '<span style="color:#60A5FA; font-weight:700; font-size:10px;">❄ COOLING ACTIVE</span>' : `<span style="color:${isDark ? '#71819A' : 'var(--text-subtle)'}; font-size:10px;">Standby</span>`}
           </div>
         </div>
       `;
@@ -4661,6 +4733,7 @@ function updateRacksView() {
   const grid = document.getElementById('vRacksFleetGrid');
   if (!grid) return;
 
+  const isDark = (typeof currentTheme !== 'undefined' && currentTheme === 'dark');
   const filterRisk = document.getElementById('vRacksFilterRisk')?.value || 'all';
   const filterCooling = document.getElementById('vRacksFilterCooling')?.value || 'all';
 
@@ -4684,23 +4757,23 @@ function updateRacksView() {
     const tooltip = `Rack ${r.name} (${role.role})\nRisk: ${(r.riskScore*100).toFixed(0)}%\nCPU: ${r.cpu.toFixed(0)}% | GPU: ${r.gpu.toFixed(0)}%\nMEM: ${r.memory.toFixed(0)}% | DISK: ${r.diskIO.toFixed(0)}% | NET: ${r.network.toFixed(0)}%\nCooling: ${(r.coolingActive || r.overrideEnabled) ? 'ACTIVE' : 'IDLE'}`;
 
     html += `
-      <div onclick="selectRack(${r.id})" title="${tooltip}" style="background:var(--bg-surface); border:1px solid ${isSel ? 'var(--brand-primary)' : 'var(--border-light)'}; border-radius:6px; padding:12px; cursor:pointer; transition:all 0.15s; ${isSel ? 'box-shadow:0 0 0 2px #bfdbfe;' : ''}">
+      <div onclick="selectRack(${r.id})" title="${tooltip}" style="background:${ec.bg}; border:1px solid ${isSel ? '#3B82F6' : ec.border}; border-radius:6px; padding:12px; cursor:pointer; transition:all 0.15s; ${isSel ? (isDark ? 'box-shadow:0 0 12px rgba(59, 130, 246, 0.5), 0 0 0 2px #3B82F6;' : 'box-shadow:0 0 0 2px var(--brand-primary);') : ''}">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <div>
-            <div style="font-weight:700; font-size:14px; color:var(--text-primary);">${r.name}</div>
-            <div style="font-size:11px; color:var(--text-subtle);">Zone ${r.zone} · ${role.role}</div>
+            <div style="font-weight:700; font-size:14px; color:${ec.color};">${r.name}</div>
+            <div style="font-size:11px; color:${isDark ? '#AAB8CC' : 'var(--text-subtle)'};">Zone ${r.zone} · ${role.role}</div>
           </div>
-          <div class="rack-risk-badge ${ec.badgeClass}">${ec.label} ${(r.riskScore*100).toFixed(0)}%</div>
+          <div class="rack-risk-badge ${ec.badgeClass}" style="background:${ec.badgeBg}; color:${ec.badgeText}; border:1px solid ${ec.border}; font-weight:700;">${ec.label} ${(r.riskScore*100).toFixed(0)}%</div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:6px; border-top:1px solid var(--border-light); font-size:11px;">
-          <span style="color:var(--text-secondary);">CPU ${r.cpu.toFixed(0)}% · GPU ${r.gpu.toFixed(0)}%</span>
-          ${(r.coolingActive || r.overrideEnabled) ? '<span style="color:#0284c7; font-weight:700; font-size:11px;">❄ COOLING</span>' : '<span style="color:var(--text-subtle); font-size:11px;">Standby</span>'}
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:6px; border-top:1px solid ${isDark ? '#24344D' : 'var(--border-light)'}; font-size:11px;">
+          <span style="color:${isDark ? '#AAB8CC' : 'var(--text-secondary)'};">CPU ${r.cpu.toFixed(0)}% · GPU ${r.gpu.toFixed(0)}%</span>
+          ${(r.coolingActive || r.overrideEnabled) ? '<span style="color:#60A5FA; font-weight:700; font-size:11px;">❄ COOLING</span>' : `<span style="color:${isDark ? '#71819A' : 'var(--text-subtle)'}; font-size:11px;">Standby</span>`}
         </div>
       </div>
     `;
   });
 
-  grid.innerHTML = html || '<div style="grid-column:1/-1; padding:20px; text-align:center; color:var(--text-subtle);">No racks match filter criteria</div>';
+  grid.innerHTML = html || `<div style="grid-column:1/-1; padding:20px; text-align:center; color:${isDark ? '#71819A' : 'var(--text-subtle)'};">No racks match filter criteria</div>`;
 }
 
 function updatePredictionsView() {
